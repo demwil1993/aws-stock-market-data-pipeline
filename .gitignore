@@ -1,0 +1,24 @@
+# Conda
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code
+.vscode/
+
+# AWS SAM
+.aws-sam/
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
