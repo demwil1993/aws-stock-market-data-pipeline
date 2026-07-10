@@ -6,22 +6,40 @@ from stockpipeline.ingestion.api_client import TwelveDataClient
 from stockpipeline.ingestion.config import get_settings
 from stockpipeline.ingestion.exceptions import StockPipelineError
 from stockpipeline.ingestion.models import StockQuote
+from stockpipeline.ingestion.watchlist import WATCHLIST
 
 
 def main() -> None:
-    """Retrieve, standardize, and display a stock quote."""
-    try:
-        settings = get_settings()
-        client = TwelveDataClient(settings)
+    """Retrieve and standardize quotes for all monitored stocks."""
+    settings = get_settings()
+    client = TwelveDataClient(settings)
 
-        raw_quote = client.get_quote("AAPL")
-        stock_quote = StockQuote.from_api_response(raw_quote)
+    successful_quotes: list[StockQuote] = []
+    failed_symbols: list[str] = []
 
-        print("Quote retrieved and standardized successfully.")
-        pprint(stock_quote.to_dict())
+    for symbol in WATCHLIST:
+        try:
+            raw_quote = client.get_quote(symbol)
+            stock_quote = StockQuote.from_api_response(raw_quote)
 
-    except (StockPipelineError, ValueError) as exc:
-        print(f"Pipeline error: {exc}")
+            successful_quotes.append(stock_quote)
+
+            print(f"\nQuote retrieved successfully for {symbol}.")
+            pprint(stock_quote.to_dict())
+
+        except StockPipelineError as exc:
+            failed_symbols.append(symbol)
+            print(f"\nFailed to retrieve {symbol}: {exc}")
+
+    print("\n" + "=" * 60)
+    print("Ingestion summary")
+    print("=" * 60)
+    print(f"Symbols requested: {len(WATCHLIST)}")
+    print(f"Quotes retrieved: {len(successful_quotes)}")
+    print(f"Quotes failed: {len(failed_symbols)}")
+
+    if failed_symbols:
+        print(f"Failed symbols: {', '.join(failed_symbols)}")
 
 
 if __name__ == "__main__":
