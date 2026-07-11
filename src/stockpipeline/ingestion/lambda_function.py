@@ -1,30 +1,27 @@
 """AWS Lambda entry point for scheduled stock quote ingestion."""
 
 import logging
+from functools import partial
 from typing import Any
+
+import boto3
 
 from stockpipeline.ingestion.api_client import TwelveDataClient
 from stockpipeline.ingestion.config import get_settings
 from stockpipeline.ingestion.pipeline import IngestionResult, run_ingestion
 from stockpipeline.ingestion.watchlist import WATCHLIST
 from stockpipeline.logging_config import configure_logging
+from stockpipeline.storage.s3_storage import (
+    write_curated_quotes_to_s3,
+    write_raw_quotes_to_s3,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
 def _get_symbols(event: dict[str, Any]) -> tuple[str, ...]:
-    """Extract an optional stock-symbol list from a Lambda event.
-
-    Args:
-        event: EventBridge Scheduler or manually supplied Lambda event.
-
-    Returns:
-        Normalized stock symbols from the event, or the default watchlist.
-
-    Raises:
-        ValueError: If the supplied symbols value is invalid.
-    """
+    """Extract an optional stock-symbol list from a Lambda event."""
     supplied_symbols = event.get("symbols")
 
     if supplied_symbols is None:
@@ -48,7 +45,7 @@ def _get_symbols(event: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _build_response(result: IngestionResult) -> dict[str, Any]:
-    """Convert an ingestion result into a JSON-serializable response."""
+    """Convert an ingestion result into a JSON-compatible response."""
     return {
         "status": "completed",
         "requested_count": result.requested_count,
@@ -72,15 +69,7 @@ def lambda_handler(
     event: dict[str, Any],
     context: Any,
 ) -> dict[str, Any]:
-    """Run stock ingestion in response to a Lambda invocation.
-
-    Args:
-        event: JSON-compatible invocation payload.
-        context: Lambda runtime context object.
-
-    Returns:
-        JSON-serializable ingestion summary.
-    """
+    """Run stock ingestion and store results in Amazon S3."""
     configure_logging()
 
     request_id = getattr(
@@ -95,18 +84,33 @@ def lambda_handler(
     )
 
     symbols = _get_symbols(event)
+    settings = get_settings()
 
-    logger.info(
-        "Symbols selected for ingestion: symbols=%s",
-        ",".join(symbols),
+    if not settings.s3_bucket_name:
+        raise ValueError(
+            "STOCK_DATA_BUCKET is missing from the Lambda configuration."
+        )
+
+    client = TwelveDataClient(settings)
+    s3_client = boto3.client("s3")
+
+    raw_writer = partial(
+        write_raw_quotes_to_s3,
+        bucket_name=settings.s3_bucket_name,
+        s3_client=s3_client,
     )
 
-    settings = get_settings()
-    client = TwelveDataClient(settings)
+    curated_writer = partial(
+        write_curated_quotes_to_s3,
+        bucket_name=settings.s3_bucket_name,
+        s3_client=s3_client,
+    )
 
     result = run_ingestion(
         client=client,
         symbols=symbols,
+        raw_writer=raw_writer,
+        curated_writer=curated_writer,
     )
 
     response = _build_response(result)

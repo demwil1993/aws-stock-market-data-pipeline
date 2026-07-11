@@ -89,6 +89,9 @@ def test_build_response_is_json_serializable() -> None:
 
 
 @patch(
+    "stockpipeline.ingestion.lambda_function.boto3.client"
+)
+@patch(
     "stockpipeline.ingestion.lambda_function.run_ingestion"
 )
 @patch(
@@ -101,21 +104,30 @@ def test_lambda_handler_runs_ingestion(
     mock_get_settings: Mock,
     mock_client_class: Mock,
     mock_run_ingestion: Mock,
+    mock_boto3_client: Mock,
 ) -> None:
-    """Create the client and run ingestion using event symbols."""
+    """Run ingestion with S3 writers and event symbols."""
     mock_settings = Mock()
-    mock_client = Mock()
+    mock_settings.s3_bucket_name = "test-stock-bucket"
+
+    mock_api_client = Mock()
+    mock_s3_client = Mock()
 
     mock_get_settings.return_value = mock_settings
-    mock_client_class.return_value = mock_client
+    mock_client_class.return_value = mock_api_client
+    mock_boto3_client.return_value = mock_s3_client
 
     mock_run_ingestion.return_value = IngestionResult(
         requested_count=2,
         successful_count=2,
         failed_count=0,
         failed_symbols=(),
-        raw_storage_location="s3://example/raw/test.jsonl",
-        curated_storage_location="s3://example/curated/test.jsonl",
+        raw_storage_location=(
+            "s3://test-stock-bucket/raw/test.jsonl"
+        ),
+        curated_storage_location=(
+            "s3://test-stock-bucket/curated/test.jsonl"
+        ),
     )
 
     event = {
@@ -132,11 +144,14 @@ def test_lambda_handler_runs_ingestion(
 
     mock_get_settings.assert_called_once_with()
     mock_client_class.assert_called_once_with(mock_settings)
+    mock_boto3_client.assert_called_once_with("s3")
 
-    mock_run_ingestion.assert_called_once_with(
-        client=mock_client,
-        symbols=("AAPL", "AMZN"),
-    )
+    call_arguments = mock_run_ingestion.call_args.kwargs
+
+    assert call_arguments["client"] is mock_api_client
+    assert call_arguments["symbols"] == ("AAPL", "AMZN")
+    assert callable(call_arguments["raw_writer"])
+    assert callable(call_arguments["curated_writer"])
 
     assert response["status"] == "completed"
     assert response["requested_count"] == 2
