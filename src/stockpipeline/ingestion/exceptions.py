@@ -15,3 +15,7 @@ class StockAPIConnectionError(StockPipelineError):
 
 class InvalidStockResponseError(StockPipelineError):
     """Raised when the stock API response is missing required data."""
+
+
+class StockValidationError(StockPipelineError):
+    """Raised when a standardized stock quote fails validation."""

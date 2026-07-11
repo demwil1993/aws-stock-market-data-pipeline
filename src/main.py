@@ -6,6 +6,7 @@ from stockpipeline.ingestion.api_client import TwelveDataClient
 from stockpipeline.ingestion.config import get_settings
 from stockpipeline.ingestion.exceptions import StockPipelineError
 from stockpipeline.ingestion.models import StockQuote
+from stockpipeline.ingestion.validation import validate_stock_quote
 from stockpipeline.ingestion.watchlist import WATCHLIST
 from stockpipeline.logging_config import configure_logging
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Retrieve and standardize quotes for all monitored stocks."""
+    """Retrieve, standardize, and validate all monitored stock quotes."""
     configure_logging()
 
     logger.info("Starting stock quote ingestion.")
@@ -32,10 +33,15 @@ def main() -> None:
             raw_quote = client.get_quote(symbol)
             stock_quote = StockQuote.from_api_response(raw_quote)
 
+            validate_stock_quote(stock_quote)
+
             successful_quotes.append(stock_quote)
 
             logger.info(
-                "Quote retrieved successfully: symbol=%s price=%s volume=%s",
+                (
+                    "Quote retrieved and validated successfully: "
+                    "symbol=%s price=%s volume=%s"
+                ),
                 stock_quote.symbol,
                 stock_quote.price,
                 stock_quote.volume,
@@ -45,7 +51,7 @@ def main() -> None:
             failed_symbols.append(symbol)
 
             logger.error(
-                "Quote retrieval failed: symbol=%s error=%s",
+                "Quote processing failed: symbol=%s error=%s",
                 symbol,
                 exc,
             )
