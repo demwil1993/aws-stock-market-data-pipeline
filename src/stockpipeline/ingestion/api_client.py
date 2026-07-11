@@ -1,5 +1,6 @@
 """Client for retrieving stock quote data from the Twelve Data API."""
 
+import logging
 from typing import Any
 
 import requests
@@ -10,6 +11,9 @@ from stockpipeline.ingestion.exceptions import (
     StockAPIConnectionError,
     StockAPIError,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class TwelveDataClient:
@@ -34,9 +38,10 @@ class TwelveDataClient:
             Raw quote data returned by Twelve Data.
 
         Raises:
+            ValueError: If the stock symbol is empty.
             StockAPIConnectionError: If the HTTP request fails.
             StockAPIError: If Twelve Data returns an API error.
-            InvalidStockResponseError: If required fields are missing.
+            InvalidStockResponseError: If the response is invalid or incomplete.
         """
         normalized_symbol = symbol.strip().upper()
 
@@ -49,12 +54,25 @@ class TwelveDataClient:
         }
 
         try:
+            logger.debug(
+                "Sending request to Twelve Data: symbol=%s",
+                normalized_symbol,
+            )
+
             response = requests.get(
                 self.api_url,
                 params=params,
                 timeout=15,
             )
             response.raise_for_status()
+
+            logger.debug(
+                "Received response from Twelve Data: "
+                "symbol=%s status_code=%s",
+                normalized_symbol,
+                response.status_code,
+            )
+
         except requests.RequestException as exc:
             raise StockAPIConnectionError(
                 f"Unable to retrieve quote for {normalized_symbol}."
@@ -68,17 +86,26 @@ class TwelveDataClient:
             ) from exc
 
         if data.get("status") == "error":
-            message = data.get("message", "Unknown Twelve Data API error.")
+            message = data.get(
+                "message",
+                "Unknown Twelve Data API error.",
+            )
+
             raise StockAPIError(
                 f"Twelve Data error for {normalized_symbol}: {message}"
             )
 
-        required_fields = {"symbol", "close", "datetime"}
+        required_fields = {
+            "symbol",
+            "close",
+            "datetime",
+        }
 
         missing_fields = required_fields.difference(data)
 
         if missing_fields:
             missing = ", ".join(sorted(missing_fields))
+
             raise InvalidStockResponseError(
                 f"Quote for {normalized_symbol} is missing fields: {missing}"
             )
