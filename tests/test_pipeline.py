@@ -83,10 +83,15 @@ def test_run_ingestion_processes_all_symbols(
     assert result.successful_count == 2
     assert result.failed_count == 0
     assert result.failed_symbols == ()
-    assert result.raw_file_path is not None
-    assert result.curated_file_path is not None
-    assert result.raw_file_path.exists()
-    assert result.curated_file_path.exists()
+
+    assert result.raw_storage_location is not None
+    assert result.curated_storage_location is not None
+
+    assert isinstance(result.raw_storage_location, Path)
+    assert isinstance(result.curated_storage_location, Path)
+
+    assert result.raw_storage_location.exists()
+    assert result.curated_storage_location.exists()
 
     client.get_quote.assert_any_call("AAPL")
     client.get_quote.assert_any_call("AMZN")
@@ -135,22 +140,45 @@ def test_run_ingestion_continues_after_symbol_failure(
     assert result.successful_count == 2
     assert result.failed_count == 1
     assert result.failed_symbols == ("AMZN",)
-    assert result.raw_file_path is not None
-    assert result.curated_file_path is not None
+
+    assert result.raw_storage_location is not None
+    assert result.curated_storage_location is not None
+
+    assert isinstance(result.raw_storage_location, Path)
+    assert isinstance(result.curated_storage_location, Path)
 
     raw_lines = (
-        result.raw_file_path
+        result.raw_storage_location
         .read_text(encoding="utf-8")
         .splitlines()
     )
+
     curated_lines = (
-        result.curated_file_path
+        result.curated_storage_location
         .read_text(encoding="utf-8")
         .splitlines()
     )
 
     assert len(raw_lines) == 2
     assert len(curated_lines) == 2
+
+    raw_records = [json.loads(line) for line in raw_lines]
+    curated_records = [json.loads(line) for line in curated_lines]
+
+    assert [record["symbol"] for record in raw_records] == [
+        "AAPL",
+        "JPM",
+    ]
+
+    assert [record["symbol"] for record in curated_records] == [
+        "AAPL",
+        "JPM",
+    ]
+
+    client.get_quote.assert_any_call("AAPL")
+    client.get_quote.assert_any_call("AMZN")
+    client.get_quote.assert_any_call("JPM")
+    assert client.get_quote.call_count == 3
 
 
 def _write_test_records(

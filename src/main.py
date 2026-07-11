@@ -30,6 +30,12 @@ def main() -> None:
             result.failed_count,
         )
 
+    logger.info(
+        "Local storage locations: raw=%s curated=%s",
+        result.raw_storage_location,
+        result.curated_storage_location,
+    )
+
 
 if __name__ == "__main__":
     main()
