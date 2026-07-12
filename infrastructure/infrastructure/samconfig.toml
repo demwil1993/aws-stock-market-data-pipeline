@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "stock-market-pipeline-dev"
+resolve_s3 = true
+s3_prefix = "stock-market-pipeline-dev"
+region = "us-east-2"
+profile = "stock-pipeline"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "EnvironmentName=\"dev\" TwelveDataSecretArn=\"arn:aws:secretsmanager:us-east-2:458255180332:secret:stock-pipeline/twelve-data-api-key-zt2NI6\""
+image_repositories = []
+
+[default.global.parameters]
+region = "us-east-2"

@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Stock market ingestion pipeline using AWS Lambda, Amazon S3,
+  AWS Secrets Manager, CloudWatch Logs, and least-privilege IAM.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: Deployment environment name.
+
+  TwelveDataSecretArn:
+    Type: String
+    Description: >
+      ARN of the Secrets Manager secret containing the Twelve Data API key.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    MemorySize: 128
+    Timeout: 30
+
+Resources:
+  StockDataBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+
+      LifecycleConfiguration:
+        Rules:
+          - Id: RawDataLifecycle
+            Status: Enabled
+            Prefix: raw/
+            ExpirationInDays: 90
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+          - Id: CuratedDataLifecycle
+            Status: Enabled
+            Prefix: curated/
+            ExpirationInDays: 365
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+          - Id: RejectedDataLifecycle
+            Status: Enabled
+            Prefix: rejected/
+            ExpirationInDays: 90
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+      Tags:
+        - Key: Project
+          Value: aws-stock-market-data-pipeline
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ManagedBy
+          Value: AWS-SAM
+
+  StockDataBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+
+    Properties:
+      Bucket: !Ref StockDataBucket
+
+      PolicyDocument:
+        Version: "2012-10-17"
+
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+
+            Resource:
+              - !GetAtt StockDataBucket.Arn
+              - !Sub "${StockDataBucket.Arn}/*"
+
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  StockIngestionFunction:
+    Type: AWS::Serverless::Function
+
+    Properties:
+      FunctionName: !Sub "stock-pipeline-ingestion-${EnvironmentName}"
+
+      Description: >
+        Retrieves stock quotes, validates the records, and stores
+        raw and curated JSONL objects in Amazon S3.
+
+      CodeUri: ../src
+
+      Handler: stockpipeline.ingestion.lambda_function.lambda_handler
+
+      Environment:
+        Variables:
+          STOCK_DATA_BUCKET: !Ref StockDataBucket
+          TWELVE_DATA_SECRET_ARN: !Ref TwelveDataSecretArn
+          LOG_LEVEL: INFO
+
+      Policies:
+        - Statement:
+            - Sid: WriteStockDataObjects
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub "${StockDataBucket.Arn}/raw/*"
+                - !Sub "${StockDataBucket.Arn}/curated/*"
+                - !Sub "${StockDataBucket.Arn}/rejected/*"
+
+            - Sid: ReadTwelveDataSecret
+              Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref TwelveDataSecretArn
+
+      Tags:
+        Project: aws-stock-market-data-pipeline
+        Environment: !Ref EnvironmentName
+        ManagedBy: AWS-SAM
+
+  StockIngestionLogGroup:
+    Type: AWS::Logs::LogGroup
+
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${StockIngestionFunction}"
+      RetentionInDays: 14
+
+Outputs:
+  StockDataBucketName:
+    Description: Name of the stock-market data bucket.
+    Value: !Ref StockDataBucket
+
+  StockDataBucketArn:
+    Description: ARN of the stock-market data bucket.
+    Value: !GetAtt StockDataBucket.Arn
+
+  StockIngestionFunctionName:
+    Description: Name of the stock ingestion Lambda function.
+    Value: !Ref StockIngestionFunction
+
+  StockIngestionFunctionArn:
+    Description: ARN of the stock ingestion Lambda function.
+    Value: !GetAtt StockIngestionFunction.Arn

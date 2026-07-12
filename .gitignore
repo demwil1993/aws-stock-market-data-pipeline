@@ -12,8 +12,14 @@ __pycache__/
 # VS Code
 .vscode/
 
-# AWS SAM
+# AWS SAM build files
 .aws-sam/
+
+# Local AWS command output
+lambda-response.json
+
+# Downloaded cloud data
+curated-test.jsonl
 
 # Locally generated pipeline data
 data/
