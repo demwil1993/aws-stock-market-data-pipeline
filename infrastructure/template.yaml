@@ -28,6 +28,10 @@ Parameters:
       - DISABLED
     Description: Enables or disables the stock ingestion schedules.
 
+  AlertEmail:
+    Type: String
+    Description: Email address that receives pipeline alarm notifications.
+
 Globals:
   Function:
     Runtime: python3.12
@@ -218,6 +222,117 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${StockIngestionFunction}"
       RetentionInDays: 14
 
+  PipelineAlarmTopic:
+    Type: AWS::SNS::Topic
+
+    Properties:
+      TopicName: !Sub "stock-pipeline-alarms-${EnvironmentName}"
+
+      Tags:
+        - Key: Project
+          Value: aws-stock-market-data-pipeline
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: ManagedBy
+          Value: AWS-SAM
+
+  PipelineAlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+
+    Properties:
+      TopicArn: !Ref PipelineAlarmTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  StockIngestionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+
+    Properties:
+      AlarmName: !Sub "stock-pipeline-lambda-errors-${EnvironmentName}"
+
+      AlarmDescription: >
+        Alerts when the stock ingestion Lambda has one or more
+        unhandled invocation errors within five minutes.
+
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StockIngestionFunction
+
+      AlarmActions:
+        - !Ref PipelineAlarmTopic
+
+      OKActions:
+        - !Ref PipelineAlarmTopic
+
+  StockIngestionThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+
+    Properties:
+      AlarmName: !Sub "stock-pipeline-lambda-throttles-${EnvironmentName}"
+
+      AlarmDescription: >
+        Alerts when the stock ingestion Lambda invocation is throttled.
+
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StockIngestionFunction
+
+      AlarmActions:
+        - !Ref PipelineAlarmTopic
+
+      OKActions:
+        - !Ref PipelineAlarmTopic
+
+  StockIngestionDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+
+    Properties:
+      AlarmName: !Sub "stock-pipeline-lambda-duration-${EnvironmentName}"
+
+      AlarmDescription: >
+        Alerts when the stock ingestion Lambda execution duration
+        reaches 25 seconds, approaching its 30-second timeout.
+
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 25000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref StockIngestionFunction
+
+      AlarmActions:
+        - !Ref PipelineAlarmTopic
+
+      OKActions:
+        - !Ref PipelineAlarmTopic
+
 Outputs:
   StockDataBucketName:
     Description: Name of the stock-market data bucket.
@@ -234,3 +349,19 @@ Outputs:
   StockIngestionFunctionArn:
     Description: ARN of the stock ingestion Lambda function.
     Value: !GetAtt StockIngestionFunction.Arn
+
+  PipelineAlarmTopicArn:
+    Description: ARN of the SNS topic used for pipeline alarm notifications.
+    Value: !Ref PipelineAlarmTopic
+
+  StockIngestionErrorAlarmName:
+    Description: Name of the Lambda error alarm.
+    Value: !Ref StockIngestionErrorAlarm
+
+  StockIngestionThrottleAlarmName:
+    Description: Name of the Lambda throttle alarm.
+    Value: !Ref StockIngestionThrottleAlarm
+
+  StockIngestionDurationAlarmName:
+    Description: Name of the Lambda duration alarm.
+    Value: !Ref StockIngestionDurationAlarm

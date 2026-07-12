@@ -27,6 +27,10 @@ infrastructure/samconfig.toml
 # Locally generated pipeline data
 data/
 
+# Local Lambda invocation results
+lambda-response.json
+invalid-lambda-response.json
+
 # Environment files
 .env
 .env.*
