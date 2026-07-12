@@ -20,6 +20,14 @@ Parameters:
     Description: >
       ARN of the Secrets Manager secret containing the Twelve Data API key.
 
+  IngestionScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - ENABLED
+      - DISABLED
+    Description: Enables or disables the stock ingestion schedules.
+
 Globals:
   Function:
     Runtime: python3.12
@@ -123,6 +131,62 @@ Resources:
           STOCK_DATA_BUCKET: !Ref StockDataBucket
           TWELVE_DATA_SECRET_ARN: !Ref TwelveDataSecretArn
           LOG_LEVEL: INFO
+
+      Events:
+        MarketOpenSchedule:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub "stock-pipeline-market-open-${EnvironmentName}"
+            Description: >
+              Runs every five minutes from 9:30 AM through
+              9:55 AM Eastern Time on weekdays.
+            ScheduleExpression: "cron(30/5 9 ? * MON-FRI *)"
+            ScheduleExpressionTimezone: America/New_York
+            State: !Ref IngestionScheduleState
+            FlexibleTimeWindow:
+              Mode: "OFF"
+            RetryPolicy:
+              MaximumRetryAttempts: 1
+              MaximumEventAgeInSeconds: 300
+            Input: >
+              {"source":"aws.scheduler","detail-type":"Scheduled Event",
+              "symbols":["AAPL","AMZN","JPM","WMT","XOM"]}
+
+        MarketDaySchedule:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub "stock-pipeline-market-day-${EnvironmentName}"
+            Description: >
+              Runs every five minutes from 10:00 AM through
+              3:55 PM Eastern Time on weekdays.
+            ScheduleExpression: "cron(0/5 10-15 ? * MON-FRI *)"
+            ScheduleExpressionTimezone: America/New_York
+            State: !Ref IngestionScheduleState
+            FlexibleTimeWindow:
+              Mode: "OFF"
+            RetryPolicy:
+              MaximumRetryAttempts: 1
+              MaximumEventAgeInSeconds: 300
+            Input: >
+              {"source":"aws.scheduler","detail-type":"Scheduled Event",
+              "symbols":["AAPL","AMZN","JPM","WMT","XOM"]}
+
+        MarketCloseSchedule:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub "stock-pipeline-market-close-${EnvironmentName}"
+            Description: Runs once at 4:00 PM Eastern Time on weekdays.
+            ScheduleExpression: "cron(0 16 ? * MON-FRI *)"
+            ScheduleExpressionTimezone: America/New_York
+            State: !Ref IngestionScheduleState
+            FlexibleTimeWindow:
+              Mode: "OFF"
+            RetryPolicy:
+              MaximumRetryAttempts: 1
+              MaximumEventAgeInSeconds: 300
+            Input: >
+              {"source":"aws.scheduler","detail-type":"Scheduled Event",
+              "symbols":["AAPL","AMZN","JPM","WMT","XOM"]}
 
       Policies:
         - Statement:
