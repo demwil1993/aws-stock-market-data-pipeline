@@ -21,6 +21,9 @@ lambda-response.json
 # Downloaded cloud data
 curated-test.jsonl
 
+# SAM deployment configuration
+infrastructure/samconfig.toml
+
 # Locally generated pipeline data
 data/
 
