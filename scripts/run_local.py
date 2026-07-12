@@ -1,6 +1,16 @@
-"""Local entry point for the stock-market ingestion pipeline."""
+"""Run the stock-market ingestion pipeline locally."""
 
 import logging
+import sys
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SOURCE_ROOT = PROJECT_ROOT / "src"
+
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
 
 from stockpipeline.ingestion.api_client import TwelveDataClient
 from stockpipeline.ingestion.config import get_settings
@@ -13,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Run the stock ingestion pipeline locally."""
+    """Run the stock ingestion pipeline using local storage."""
     configure_logging()
 
     settings = get_settings()
