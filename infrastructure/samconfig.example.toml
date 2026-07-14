@@ -7,7 +7,7 @@ capabilities = "CAPABILITY_IAM"
 resolve_s3 = true
 confirm_changeset = true
 
-parameter_overrides = "EnvironmentName=\"dev\" TwelveDataSecretArn=\"YOUR_SECRET_ARN\" IngestionScheduleState=\"DISABLED\" AlertEmail=\"YOUR_ALERT_EMAIL\""
+parameter_overrides = "EnvironmentName=\"dev\" TwelveDataSecretArn=\"YOUR_SECRET_ARN\" IngestionScheduleState=\"ENABLED\" AlertEmail=\"YOUR_ALERT_EMAIL\""
 EnvironmentName=dev
 TwelveDataSecretArn=YOUR_SECRET_ARN
 """
