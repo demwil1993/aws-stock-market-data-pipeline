@@ -16,6 +16,7 @@ Copy the example configuration:
 
 ```cmd
 copy infrastructure\samconfig.example.toml infrastructure\samconfig.toml
+```
 
 ## Architecture
 
@@ -55,3 +56,4 @@ AWS Glue Data Catalog
         │
         ▼
 Amazon Athena
+```
