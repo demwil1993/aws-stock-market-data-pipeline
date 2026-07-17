@@ -1,4 +1,4 @@
-"""Local storage utilities for raw and curated stock-market records."""
+"""Local storage utilities for raw and standardized stock-market records."""
 
 import json
 from datetime import UTC, datetime
@@ -40,22 +40,22 @@ def create_raw_partition_path(
     return partition_path
 
 
-def create_curated_partition_path(
+def create_standardized_partition_path(
     run_timestamp: datetime,
     data_root: Path = DEFAULT_DATA_ROOT,
 ) -> Path:
-    """Create the partitioned directory for curated quote records.
+    """Create the partitioned directory for standardized quote records.
 
     Args:
         run_timestamp: UTC timestamp for the ingestion run.
         data_root: Root directory where pipeline data is stored.
 
     Returns:
-        Path to the curated partition directory.
+        Path to the standardized partition directory.
     """
     partition_path = (
         data_root
-        / "curated"
+        / "standardized"
         / "quotes"
         / f"year={run_timestamp:%Y}"
         / f"month={run_timestamp:%m}"
@@ -101,7 +101,7 @@ def write_raw_quotes(
     return file_path
 
 
-def write_curated_quotes(
+def write_standardized_quotes(
     quotes: Iterable[StockQuote],
     run_timestamp: datetime | None = None,
     data_root: Path = DEFAULT_DATA_ROOT,
@@ -114,10 +114,10 @@ def write_curated_quotes(
         data_root: Root directory where pipeline data is stored.
 
     Returns:
-        Path to the curated JSONL file.
+        Path to the standardized JSONL file.
     """
     timestamp = run_timestamp or datetime.now(UTC)
-    partition_path = create_curated_partition_path(
+    partition_path = create_standardized_partition_path(
         timestamp,
         data_root,
     )

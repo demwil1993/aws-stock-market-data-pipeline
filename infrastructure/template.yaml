@@ -71,7 +71,7 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
 
-          - Id: CuratedDataLifecycle
+          - Id: StandardizedDataLifecycle
             Status: Enabled
             Prefix: curated/
             ExpirationInDays: 365
@@ -124,7 +124,7 @@ Resources:
 
       Description: >
         Retrieves stock quotes, validates the records, and stores
-        raw and curated JSONL objects in Amazon S3.
+        raw and standardized JSONL objects in Amazon S3.
 
       CodeUri: ../src
 
@@ -200,7 +200,7 @@ Resources:
                 - s3:PutObject
               Resource:
                 - !Sub "${StockDataBucket.Arn}/raw/*"
-                - !Sub "${StockDataBucket.Arn}/curated/*"
+                - !Sub "${StockDataBucket.Arn}/standardized/*"
                 - !Sub "${StockDataBucket.Arn}/rejected/*"
 
             - Sid: ReadTwelveDataSecret

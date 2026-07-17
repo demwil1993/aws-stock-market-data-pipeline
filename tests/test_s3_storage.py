@@ -6,10 +6,10 @@ from unittest.mock import Mock
 
 from stockpipeline.ingestion.models import StockQuote
 from stockpipeline.storage.s3_storage import (
-    create_curated_s3_key,
     create_raw_s3_key,
-    write_curated_quotes_to_s3,
+    create_standardized_s3_key,
     write_raw_quotes_to_s3,
+    write_standardized_quotes_to_s3,
 )
 
 
@@ -58,12 +58,12 @@ def test_create_raw_s3_key() -> None:
     )
 
 
-def test_create_curated_s3_key() -> None:
-    """Create the expected partitioned curated S3 key."""
-    result = create_curated_s3_key(TEST_TIMESTAMP)
+def test_create_standardized_s3_key() -> None:
+    """Create the expected partitioned standardized S3 key."""
+    result = create_standardized_s3_key(TEST_TIMESTAMP)
 
     assert result == (
-        "curated/quotes/"
+        "standardized/quotes/"
         "year=2026/"
         "month=07/"
         "day=11/"
@@ -115,12 +115,12 @@ def test_write_raw_quotes_to_s3() -> None:
     assert json.loads(lines[1]) == records[1]
 
 
-def test_write_curated_quotes_to_s3() -> None:
+def test_write_standardized_quotes_to_s3() -> None:
     """Upload standardized records as newline-delimited JSON."""
     s3_client = Mock()
     quote = create_test_quote()
 
-    result = write_curated_quotes_to_s3(
+    result = write_standardized_quotes_to_s3(
         quotes=[quote],
         run_timestamp=TEST_TIMESTAMP,
         bucket_name="test-stock-bucket",
@@ -129,7 +129,7 @@ def test_write_curated_quotes_to_s3() -> None:
 
     assert result == (
         "s3://test-stock-bucket/"
-        "curated/quotes/year=2026/month=07/day=11/"
+        "standardized/quotes/year=2026/month=07/day=11/"
         "quotes_20260711T153045Z.jsonl"
     )
 

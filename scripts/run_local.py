@@ -41,9 +41,9 @@ def main() -> None:
         )
 
     logger.info(
-        "Local storage locations: raw=%s curated=%s",
+        "Local storage locations: raw=%s standardized=%s",
         result.raw_storage_location,
-        result.curated_storage_location,
+        result.standardized_storage_location,
     )
 
 

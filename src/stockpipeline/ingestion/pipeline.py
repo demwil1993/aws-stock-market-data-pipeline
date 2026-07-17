@@ -12,8 +12,8 @@ from stockpipeline.ingestion.exceptions import StockPipelineError
 from stockpipeline.ingestion.models import StockQuote
 from stockpipeline.ingestion.validation import validate_stock_quote
 from stockpipeline.storage.local_storage import (
-    write_curated_quotes,
     write_raw_quotes,
+    write_standardized_quotes,
 )
 
 
@@ -25,7 +25,7 @@ RawWriter = Callable[
     Path | str,
 ]
 
-CuratedWriter = Callable[
+StandardizedWriter = Callable[
     [Iterable[StockQuote], datetime],
     Path | str,
 ]
@@ -40,7 +40,7 @@ class IngestionResult:
     failed_count: int
     failed_symbols: tuple[str, ...]
     raw_storage_location: Path | str | None
-    curated_storage_location: Path | str | None
+    standardized_storage_location: Path | str | None
 
 
 def _default_raw_writer(
@@ -54,12 +54,12 @@ def _default_raw_writer(
     )
 
 
-def _default_curated_writer(
+def _default_standardized_writer(
     quotes: Iterable[StockQuote],
     run_timestamp: datetime,
 ) -> Path:
-    """Write curated records using the local storage implementation."""
-    return write_curated_quotes(
+    """Write standardized records using the local storage implementation."""
+    return write_standardized_quotes(
         quotes=quotes,
         run_timestamp=run_timestamp,
     )
@@ -70,7 +70,7 @@ def run_ingestion(
     symbols: tuple[str, ...],
     run_timestamp: datetime | None = None,
     raw_writer: RawWriter = _default_raw_writer,
-    curated_writer: CuratedWriter = _default_curated_writer,
+    standardized_writer: StandardizedWriter = _default_standardized_writer,
 ) -> IngestionResult:
     """Retrieve, validate, and store quotes for multiple symbols.
 
@@ -79,7 +79,7 @@ def run_ingestion(
         symbols: Stock symbols to retrieve.
         run_timestamp: Optional UTC timestamp for the ingestion run.
         raw_writer: Function used to store raw API responses.
-        curated_writer: Function used to store standardized quotes.
+        standardized_writer: Function used to store standardized quotes.
 
     Returns:
         Summary information for the completed ingestion run.
@@ -87,7 +87,7 @@ def run_ingestion(
     timestamp = run_timestamp or datetime.now(UTC)
 
     raw_quotes: list[dict[str, Any]] = []
-    successful_quotes: list[StockQuote] = []
+    standardized_quotes: list[StockQuote] = []
     failed_symbols: list[str] = []
 
     logger.info(
@@ -106,7 +106,7 @@ def run_ingestion(
             stock_quote = StockQuote.from_api_response(raw_quote)
             validate_stock_quote(stock_quote)
 
-            successful_quotes.append(stock_quote)
+            standardized_quotes.append(stock_quote)
 
             logger.info(
                 (
@@ -128,7 +128,7 @@ def run_ingestion(
             )
 
     raw_storage_location: Path | str | None = None
-    curated_storage_location: Path | str | None = None
+    standardized_storage_location: Path | str | None = None
 
     if raw_quotes:
         raw_storage_location = raw_writer(
@@ -142,25 +142,25 @@ def run_ingestion(
             len(raw_quotes),
         )
 
-    if successful_quotes:
-        curated_storage_location = curated_writer(
-            successful_quotes,
+    if standardized_quotes:
+        standardized_storage_location = standardized_writer(
+            standardized_quotes,
             timestamp,
         )
 
         logger.info(
-            "Curated quotes written: location=%s records=%s",
-            curated_storage_location,
-            len(successful_quotes),
+            "Standardized quotes written: location=%s records=%s",
+            standardized_storage_location,
+            len(standardized_quotes),
         )
 
     result = IngestionResult(
         requested_count=len(symbols),
-        successful_count=len(successful_quotes),
+        successful_count=len(standardized_quotes),
         failed_count=len(failed_symbols),
         failed_symbols=tuple(failed_symbols),
         raw_storage_location=raw_storage_location,
-        curated_storage_location=curated_storage_location,
+        standardized_storage_location=standardized_storage_location,
     )
 
     logger.info(

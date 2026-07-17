@@ -15,9 +15,6 @@ __pycache__/
 # AWS SAM build files
 .aws-sam/
 
-# Local AWS command output
-lambda-response.json
-
 # Downloaded cloud data
 curated-test.jsonl
 

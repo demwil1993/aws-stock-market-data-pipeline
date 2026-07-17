@@ -12,8 +12,8 @@ from stockpipeline.ingestion.pipeline import IngestionResult, run_ingestion
 from stockpipeline.ingestion.watchlist import WATCHLIST
 from stockpipeline.logging_config import configure_logging
 from stockpipeline.storage.s3_storage import (
-    write_curated_quotes_to_s3,
     write_raw_quotes_to_s3,
+    write_standardized_quotes_to_s3,
 )
 
 
@@ -57,9 +57,9 @@ def _build_response(result: IngestionResult) -> dict[str, Any]:
             if result.raw_storage_location is not None
             else None
         ),
-        "curated_storage_location": (
-            str(result.curated_storage_location)
-            if result.curated_storage_location is not None
+        "standardized_storage_location": (
+            str(result.standardized_storage_location)
+            if result.standardized_storage_location is not None
             else None
         ),
     }
@@ -100,8 +100,8 @@ def lambda_handler(
         s3_client=s3_client,
     )
 
-    curated_writer = partial(
-        write_curated_quotes_to_s3,
+    standardized_writer = partial(
+        write_standardized_quotes_to_s3,
         bucket_name=settings.s3_bucket_name,
         s3_client=s3_client,
     )
@@ -110,7 +110,7 @@ def lambda_handler(
         client=client,
         symbols=symbols,
         raw_writer=raw_writer,
-        curated_writer=curated_writer,
+        standardized_writer=standardized_writer,
     )
 
     response = _build_response(result)

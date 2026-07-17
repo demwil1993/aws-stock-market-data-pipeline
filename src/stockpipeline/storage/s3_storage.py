@@ -29,8 +29,8 @@ def create_raw_s3_key(run_timestamp: datetime) -> str:
     )
 
 
-def create_curated_s3_key(run_timestamp: datetime) -> str:
-    """Create the partitioned S3 key for curated quote records.
+def create_standardized_s3_key(run_timestamp: datetime) -> str:
+    """Create the partitioned S3 key for standardized quote records.
 
     Args:
         run_timestamp: UTC timestamp for the ingestion run.
@@ -39,7 +39,7 @@ def create_curated_s3_key(run_timestamp: datetime) -> str:
         Partitioned S3 object key.
     """
     return (
-        "curated/quotes/"
+        "standardized/quotes/"
         f"year={run_timestamp:%Y}/"
         f"month={run_timestamp:%m}/"
         f"day={run_timestamp:%d}/"
@@ -102,7 +102,7 @@ def write_raw_quotes_to_s3(
     return f"s3://{bucket_name}/{object_key}"
 
 
-def write_curated_quotes_to_s3(
+def write_standardized_quotes_to_s3(
     quotes: Iterable[StockQuote],
     run_timestamp: datetime,
     bucket_name: str,
@@ -126,7 +126,7 @@ def write_curated_quotes_to_s3(
         raise ValueError("S3 bucket name cannot be blank.")
 
     client = s3_client or boto3.client("s3")
-    object_key = create_curated_s3_key(run_timestamp)
+    object_key = create_standardized_s3_key(run_timestamp)
 
     records = (
         quote.to_dict()

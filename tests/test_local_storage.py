@@ -1,4 +1,4 @@
-"""Tests for local raw and curated storage."""
+"""Tests for local raw and standardized storage."""
 
 import json
 from datetime import UTC, datetime
@@ -6,10 +6,10 @@ from pathlib import Path
 
 from stockpipeline.ingestion.models import StockQuote
 from stockpipeline.storage.local_storage import (
-    create_curated_partition_path,
     create_raw_partition_path,
-    write_curated_quotes,
+    create_standardized_partition_path,
     write_raw_quotes,
+    write_standardized_quotes,
 )
 
 
@@ -66,16 +66,16 @@ def test_create_raw_partition_path(tmp_path: Path) -> None:
     assert result.is_dir()
 
 
-def test_create_curated_partition_path(tmp_path: Path) -> None:
-    """Create the expected curated partition directory."""
-    result = create_curated_partition_path(
+def test_create_standardized_partition_path(tmp_path: Path) -> None:
+    """Create the expected standardized partition directory."""
+    result = create_standardized_partition_path(
         run_timestamp=TEST_TIMESTAMP,
         data_root=tmp_path,
     )
 
     expected = (
         tmp_path
-        / "curated"
+        / "standardized"
         / "quotes"
         / "year=2026"
         / "month=07"
@@ -120,11 +120,11 @@ def test_write_raw_quotes(tmp_path: Path) -> None:
     assert json.loads(lines[1]) == records[1]
 
 
-def test_write_curated_quotes(tmp_path: Path) -> None:
+def test_write_standardized_quotes(tmp_path: Path) -> None:
     """Write standardized stock quotes as newline-delimited JSON."""
     quotes = [create_test_quote()]
 
-    file_path = write_curated_quotes(
+    file_path = write_standardized_quotes(
         quotes=quotes,
         run_timestamp=TEST_TIMESTAMP,
         data_root=tmp_path,

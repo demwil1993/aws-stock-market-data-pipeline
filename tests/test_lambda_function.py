@@ -68,7 +68,9 @@ def test_build_response_is_json_serializable() -> None:
         failed_count=1,
         failed_symbols=("AMZN",),
         raw_storage_location=Path("data/raw/test.jsonl"),
-        curated_storage_location=Path("data/curated/test.jsonl"),
+        standardized_storage_location=Path(
+            "data/standardized/test.jsonl"
+        ),
     )
 
     response = _build_response(result)
@@ -82,8 +84,8 @@ def test_build_response_is_json_serializable() -> None:
         "raw_storage_location": str(
             Path("data/raw/test.jsonl")
         ),
-        "curated_storage_location": str(
-            Path("data/curated/test.jsonl")
+        "standardized_storage_location": str(
+            Path("data/standardized/test.jsonl")
         ),
     }
 
@@ -125,8 +127,8 @@ def test_lambda_handler_runs_ingestion(
         raw_storage_location=(
             "s3://test-stock-bucket/raw/test.jsonl"
         ),
-        curated_storage_location=(
-            "s3://test-stock-bucket/curated/test.jsonl"
+        standardized_storage_location=(
+            "s3://test-stock-bucket/standardized/test.jsonl"
         ),
     )
 
@@ -151,7 +153,7 @@ def test_lambda_handler_runs_ingestion(
     assert call_arguments["client"] is mock_api_client
     assert call_arguments["symbols"] == ("AAPL", "AMZN")
     assert callable(call_arguments["raw_writer"])
-    assert callable(call_arguments["curated_writer"])
+    assert callable(call_arguments["standardized_writer"])
 
     assert response["status"] == "completed"
     assert response["requested_count"] == 2

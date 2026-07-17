@@ -65,7 +65,7 @@ def test_run_ingestion_processes_all_symbols(
     )
 
     monkeypatch.setattr(
-        "stockpipeline.ingestion.pipeline.write_curated_quotes",
+        "stockpipeline.ingestion.pipeline.write_standardized_quotes",
         lambda quotes, run_timestamp: _write_test_quotes(
             quotes=quotes,
             run_timestamp=run_timestamp,
@@ -85,13 +85,13 @@ def test_run_ingestion_processes_all_symbols(
     assert result.failed_symbols == ()
 
     assert result.raw_storage_location is not None
-    assert result.curated_storage_location is not None
+    assert result.standardized_storage_location is not None
 
     assert isinstance(result.raw_storage_location, Path)
-    assert isinstance(result.curated_storage_location, Path)
+    assert isinstance(result.standardized_storage_location, Path)
 
     assert result.raw_storage_location.exists()
-    assert result.curated_storage_location.exists()
+    assert result.standardized_storage_location.exists()
 
     client.get_quote.assert_any_call("AAPL")
     client.get_quote.assert_any_call("AMZN")
@@ -122,7 +122,7 @@ def test_run_ingestion_continues_after_symbol_failure(
     )
 
     monkeypatch.setattr(
-        "stockpipeline.ingestion.pipeline.write_curated_quotes",
+        "stockpipeline.ingestion.pipeline.write_standardized_quotes",
         lambda quotes, run_timestamp: _write_test_quotes(
             quotes=quotes,
             run_timestamp=run_timestamp,
@@ -142,10 +142,10 @@ def test_run_ingestion_continues_after_symbol_failure(
     assert result.failed_symbols == ("AMZN",)
 
     assert result.raw_storage_location is not None
-    assert result.curated_storage_location is not None
+    assert result.standardized_storage_location is not None
 
     assert isinstance(result.raw_storage_location, Path)
-    assert isinstance(result.curated_storage_location, Path)
+    assert isinstance(result.standardized_storage_location, Path)
 
     raw_lines = (
         result.raw_storage_location
@@ -153,24 +153,26 @@ def test_run_ingestion_continues_after_symbol_failure(
         .splitlines()
     )
 
-    curated_lines = (
-        result.curated_storage_location
+    standardized_lines = (
+        result.standardized_storage_location
         .read_text(encoding="utf-8")
         .splitlines()
     )
 
     assert len(raw_lines) == 2
-    assert len(curated_lines) == 2
+    assert len(standardized_lines) == 2
 
     raw_records = [json.loads(line) for line in raw_lines]
-    curated_records = [json.loads(line) for line in curated_lines]
+    standardized_records = [
+        json.loads(line) for line in standardized_lines
+    ]
 
     assert [record["symbol"] for record in raw_records] == [
         "AAPL",
         "JPM",
     ]
 
-    assert [record["symbol"] for record in curated_records] == [
+    assert [record["symbol"] for record in standardized_records] == [
         "AAPL",
         "JPM",
     ]
@@ -209,10 +211,10 @@ def _write_test_quotes(
     run_timestamp: datetime,
     data_root: Path,
 ) -> Path:
-    """Write curated test records into a temporary directory."""
+    """Write standardized test records into a temporary directory."""
     file_path = (
         data_root
-        / "curated"
+        / "standardized"
         / f"quotes_{run_timestamp:%Y%m%dT%H%M%SZ}.jsonl"
     )
 
