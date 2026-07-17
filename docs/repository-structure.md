@@ -1,0 +1,83 @@
+```
+aws-stock-market-data-pipeline/
+│
+├── README.md
+├── LICENSE
+├── .gitignore
+├── .env.example
+├── environment.yml
+├── requirements.txt
+├── pytest.ini
+│
+├── architecture/
+│   ├── architecture-diagram.png
+│   └── data-flow.md
+│
+├── docs/
+│   ├── architecture-decisions.md
+│   ├── cost-analysis.md
+│   ├── data-dictionary.md
+│   ├── deployment-guide.md
+│   └── troubleshooting.md
+│
+├── infrastructure/
+│   ├── template.yaml
+│   ├── samconfig.example.toml
+│   └── samconfig.toml
+│
+├── sample-data/
+│   ├── eventbridge-scheduled-event.json
+│   ├── invalid-lambda-event.json
+│   ├── valid_quote.json
+│   ├── invalid_quote.json
+│   └── api_error.json
+│
+├── scripts/
+│   ├── run_local.py
+│   └── run_lambda_local.py
+│
+├── sql/
+│   ├── create_database.sql
+│   ├── create_curated_table.sql
+│   ├── validation_queries.sql
+│   └── analytics_queries.sql
+│
+├── src/
+│   ├── requirements.txt
+│   │
+│   └── stockpipeline/
+│       ├── __init__.py
+│       ├── logging_config.py
+│       │
+│       ├── ingestion/
+│       │   ├── __init__.py
+│       │   ├── api_client.py
+│       │   ├── config.py
+│       │   ├── exceptions.py
+│       │   ├── lambda_function.py
+│       │   ├── models.py
+│       │   ├── pipeline.py
+│       │   ├── validation.py
+│       │   └── watchlist.py
+│       │
+│       ├── storage/
+│       │   ├── __init__.py
+│       │   ├── local_storage.py
+│       │   └── s3_storage.py
+│       │
+│       └── transformation/
+│           ├── __init__.py
+│           ├── data_quality.py
+│           └── glue_job.py
+│
+└── tests/
+    ├── test_api_client.py
+    ├── test_lambda_function.py
+    ├── test_local_storage.py
+    ├── test_models.py
+    ├── test_pipeline.py
+    ├── test_s3_storage.py
+    ├── test_validation.py
+    ├── test_data_quality.py
+    └── test_transformation.py
+```
