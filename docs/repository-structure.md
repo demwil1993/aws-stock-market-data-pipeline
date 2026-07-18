@@ -68,7 +68,8 @@ aws-stock-market-data-pipeline/
 │       └── transformation/
 │           ├── __init__.py
 │           ├── data_quality.py
-│           └── glue_job.py
+│           ├── glue_job.py
+│           └── standardized_to_curated.py
 │
 └── tests/
     ├── test_api_client.py

@@ -73,7 +73,7 @@ Resources:
 
           - Id: StandardizedDataLifecycle
             Status: Enabled
-            Prefix: curated/
+            Prefix: standardized/
             ExpirationInDays: 365
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
@@ -84,6 +84,11 @@ Resources:
             ExpirationInDays: 90
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
+
+          - Id: DeleteAthenaQueryResults
+            Status: Enabled
+            Prefix: athena-results/
+            ExpirationInDays: 30
 
       Tags:
         - Key: Project
@@ -201,7 +206,6 @@ Resources:
               Resource:
                 - !Sub "${StockDataBucket.Arn}/raw/*"
                 - !Sub "${StockDataBucket.Arn}/standardized/*"
-                - !Sub "${StockDataBucket.Arn}/rejected/*"
 
             - Sid: ReadTwelveDataSecret
               Effect: Allow
@@ -333,6 +337,218 @@ Resources:
       OKActions:
         - !Ref PipelineAlarmTopic
 
+  GlueAssetsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-glue-assets-${AWS::AccountId}"
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+        
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteTemporaryGlueAssets
+            Status: Enabled
+            Prefix: temporary/
+            ExpirationInDays: 30
+    
+  GlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-glue-service-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+
+      Policies:
+        - PolicyName: StockDataLakeAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ListStockDataBucket
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt StockDataBucket.Arn
+
+              - Sid: ReadStandardizedData
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub "${StockDataBucket.Arn}/standardized/*"
+
+              - Sid: WriteCuratedData
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub "${StockDataBucket.Arn}/curated/*"
+
+              - Sid: WriteRejectedData
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub "${StockDataBucket.Arn}/rejected/*"
+
+              - Sid: AccessGlueAssets
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Sub "${GlueAssetsBucket.Arn}/*"
+
+              - Sid: ListGlueAssetsBucket
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt GlueAssetsBucket.Arn
+
+  # ============================================================
+  # AWS Glue Data Catalog
+  # ============================================================
+
+  StockDataCatalogDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub "${AWS::StackName}_stock_data"
+        Description: Data Catalog database for standardized and curated stock data
+
+  StandardizedDataCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: !Sub "${AWS::StackName}-standardized-crawler"
+      Description: Crawls standardized stock quote JSONL data in Amazon S3
+      Role: !GetAtt GlueServiceRole.Arn
+      DatabaseName: !Ref StockDataCatalogDatabase
+
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${StockDataBucket}/standardized/quotes/"
+
+      TablePrefix: standardized_
+
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: LOG
+
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+
+# ============================================================
+# Glue ETL Job
+# ============================================================
+
+  StandardizedToCuratedJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub "${AWS::StackName}-standardized-to-curated"
+
+      Description: >
+        Converts standardized JSONL stock quotes
+        into curated Parquet files.
+
+      Role: !GetAtt GlueServiceRole.Arn
+
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub
+          - "s3://${AssetsBucket}/scripts/standardized_to_curated.py"
+          - AssetsBucket: !Ref GlueAssetsBucket
+
+      GlueVersion: "5.0"
+
+      WorkerType: G.1X
+      NumberOfWorkers: 2
+
+      Timeout: 10
+      MaxRetries: 0
+
+      DefaultArguments:
+        "--job-language": "python"
+        "--enable-metrics": "true"
+        "--enable-continuous-cloudwatch-log": "true"
+
+        "--SOURCE_DATABASE": !Ref StockDataCatalogDatabase
+        "--SOURCE_TABLE": "standardized_quotes"
+
+        "--CURATED_OUTPUT_PATH": !Sub "s3://${StockDataBucket}/curated/quotes/"
+
+        "--REJECTED_OUTPUT_PATH": !Sub "s3://${StockDataBucket}/rejected/quotes/"
+
+  CuratedDataCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: !Sub "${AWS::StackName}-curated-crawler"
+
+      Description: Crawls curated Parquet data
+
+      Role: !GetAtt GlueServiceRole.Arn
+
+      DatabaseName: !Ref StockDataCatalogDatabase
+
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${StockDataBucket}/curated/quotes/"
+
+      TablePrefix: curated_
+
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: LOG
+
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+
+  # ============================================================
+  # Amazon Athena
+  # ============================================================
+
+  StockAnalyticsWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-analytics"
+      Description: Athena workgroup for querying stock pipeline data
+      State: ENABLED
+
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+
+        ResultConfiguration:
+          OutputLocation: !Sub "s3://${StockDataBucket}/athena-results/"
+
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+
 Outputs:
   StockDataBucketName:
     Description: Name of the stock-market data bucket.
@@ -365,3 +581,31 @@ Outputs:
   StockIngestionDurationAlarmName:
     Description: Name of the Lambda duration alarm.
     Value: !Ref StockIngestionDurationAlarm
+
+  GlueServiceRoleArn:
+    Description: IAM role used by AWS Glue crawlers and ETL jobs
+    Value: !GetAtt GlueServiceRole.Arn
+
+  GlueAssetsBucketName:
+    Description: S3 bucket for AWS Glue scripts and temporary assets
+    Value: !Ref GlueAssetsBucket
+
+  StockDataCatalogDatabaseName:
+    Description: AWS Glue Data Catalog database for the stock pipeline
+    Value: !Ref StockDataCatalogDatabase
+
+  StandardizedDataCrawlerName:
+    Description: AWS Glue crawler for standardized stock quote data
+    Value: !Ref StandardizedDataCrawler
+
+  StockAnalyticsWorkGroupName:
+    Description: Athena workgroup for stock pipeline analytics
+    Value: !Ref StockAnalyticsWorkGroup
+
+  StandardizedToCuratedJobName:
+    Description: Glue ETL Job
+    Value: !Ref StandardizedToCuratedJob
+
+  CuratedDataCrawlerName:
+    Description: Curated Glue Crawler
+    Value: !Ref CuratedDataCrawler
