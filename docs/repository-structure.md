@@ -37,10 +37,8 @@ aws-stock-market-data-pipeline/
 │   └── run_lambda_local.py
 │
 ├── sql/
-│   ├── create_database.sql
-│   ├── create_curated_table.sql
-│   ├── validation_queries.sql
-│   └── analytics_queries.sql
+│   ├── analytics_queries.sql
+│   └── validation_queries.sql
 │
 ├── src/
 │   ├── requirements.txt
@@ -67,8 +65,6 @@ aws-stock-market-data-pipeline/
 │       │
 │       └── transformation/
 │           ├── __init__.py
-│           ├── data_quality.py
-│           ├── glue_job.py
 │           └── standardized_to_curated.py
 │
 └── tests/
