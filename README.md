@@ -60,29 +60,42 @@ JSON API responses            Validated JSONL records
 
 ## Data layers
 
-```markdown
-## Data Lake Layers
-
 ### Raw
 
 Stores unmodified responses from the Twelve Data API.
 
 ```text
 raw/quotes/year=YYYY/month=MM/day=DD/
+```
 
+### Stamdardized
+
+Stores validated responses from the raw layer.
+
+```text
 standardized/quotes/year=YYYY/month=MM/day=DD/
+```
 
+### Curated
+
+Stores cleaned responses from the standardized layer in the form of parquet.
+
+```text
 curated/quotes/year=YYYY/month=MM/day=DD/
+```
 
+### Rejected
+
+Stores invalid respones from standardized layer 
+
+```text
 rejected/quotes/year=YYYY/month=MM/day=DD/
 ```
 
 
-## 4. AWS services
+## AWS services
 
 ```markdown
-## AWS Services
-
 | Service | Purpose |
 |---|---|
 | AWS Lambda | Calls the stock API and processes quote records |
@@ -147,3 +160,34 @@ Queries are stored in:
 ```text
 sql/analytics_queries.sql
 ```
+
+
+## 8. Deployment flow
+
+```markdown
+## Deployment
+
+### 1. Upload the Glue ETL script
+
+```bash
+aws s3 cp \
+  src/stockpipeline/transformation/standardized_to_curated.py \
+  s3://<glue-assets-bucket>/scripts/standardized_to_curated.py \
+  --profile stock-pipeline
+```
+
+## 9. Verification
+
+```markdown
+## Verification
+
+A successful deployment can be verified by confirming:
+
+- Lambda writes records to `raw/` and `standardized/`
+- The standardized crawler creates the standardized Glue table
+- The Glue ETL job completes successfully
+- Parquet files appear under `curated/quotes/`
+- Invalid records appear under `rejected/quotes/`, when applicable
+- The curated crawler creates `curated_quotes`
+- Athena successfully queries the curated table
+- Validation queries return the expected results
