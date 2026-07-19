@@ -95,7 +95,6 @@ rejected/quotes/year=YYYY/month=MM/day=DD/
 
 ## AWS services
 
-```markdown
 | Service | Purpose |
 |---|---|
 | AWS Lambda | Calls the stock API and processes quote records |
@@ -109,7 +108,6 @@ rejected/quotes/year=YYYY/month=MM/day=DD/
 | Amazon CloudWatch | Stores logs, metrics, and alarms |
 | Amazon SNS | Sends pipeline alarm notifications |
 | AWS SAM | Defines and deploys the serverless infrastructure |
-```
 
 ## Data Quality
 
