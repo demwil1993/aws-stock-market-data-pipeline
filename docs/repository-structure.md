@@ -25,13 +25,6 @@ aws-stock-market-data-pipeline/
 │   ├── samconfig.example.toml
 │   └── samconfig.toml
 │
-├── sample-data/
-│   ├── eventbridge-scheduled-event.json
-│   ├── invalid-lambda-event.json
-│   ├── valid_quote.json
-│   ├── invalid_quote.json
-│   └── api_error.json
-│
 ├── scripts/
 │   ├── run_local.py
 │   └── run_lambda_local.py
