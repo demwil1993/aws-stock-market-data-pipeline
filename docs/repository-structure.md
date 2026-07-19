@@ -15,10 +15,8 @@ aws-stock-market-data-pipeline/
 │
 ├── docs/
 │   ├── architecture-decisions.md
-│   ├── cost-analysis.md
 │   ├── data-dictionary.md
-│   ├── deployment-guide.md
-│   └── troubleshooting.md
+│   └── deployment-guide.md
 │
 ├── infrastructure/
 │   ├── template.yaml
