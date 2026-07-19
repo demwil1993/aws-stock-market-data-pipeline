@@ -74,7 +74,5 @@ aws-stock-market-data-pipeline/
     ├── test_models.py
     ├── test_pipeline.py
     ├── test_s3_storage.py
-    ├── test_validation.py
-    ├── test_data_quality.py
-    └── test_transformation.py
+    └── test_validation.py
 ```
