@@ -68,7 +68,7 @@ Stores unmodified responses from the Twelve Data API.
 raw/quotes/year=YYYY/month=MM/day=DD/
 ```
 
-### Stamdardized
+### Standardized
 
 Stores validated responses from the raw layer.
 
@@ -137,9 +137,6 @@ symbol + market_timestamp
 ```
 
 
-## 7. Analytics
-
-```markdown
 ## Athena Analytics
 
 The curated layer supports analytical queries including:
@@ -162,10 +159,7 @@ sql/analytics_queries.sql
 ```
 
 
-## 8. Deployment flow
-
-```markdown
-## Deployment
+## Deployment flow
 
 ### 1. Upload the Glue ETL script
 
@@ -176,9 +170,6 @@ aws s3 cp \
   --profile stock-pipeline
 ```
 
-## 9. Verification
-
-```markdown
 ## Verification
 
 A successful deployment can be verified by confirming:
