@@ -225,7 +225,7 @@ s3://stock-market-pipeline-dev-glue-assets-458255180332/
 ## Scripts
 contains the Python ETL script referenced by the Glue job.
 
-## temporary U
+## Temporary
 sed by AWS Glue for temporary job artifacts when required.
 
 
