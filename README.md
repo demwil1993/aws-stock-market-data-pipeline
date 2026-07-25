@@ -130,11 +130,49 @@ JSON API responses            Validated JSONL records
 ```
 
 
-## Data layers
+## Stock data bucket
+
+```text
+s3://stock-market-pipeline-dev-stockdatabucket-ibfmgduob2rw/
+│
+├── raw/
+│   └── quotes/
+│       └── year=2026/
+│           └── month=07/
+│               └── day=16/
+│                   └── hour=14/
+│                       └── quotes_20260716T140000Z.jsonl
+│
+├── standardized/
+│   └── quotes/
+│       └── year=2026/
+│           └── month=07/
+│               └── day=16/
+│                   └── quotes_20260716T140000Z.jsonl
+│
+├── curated/
+│   └── quotes/
+│       └── year=2026/
+│           └── month=07/
+│               └── day=16/
+│                   └── part-00000-<job-id>.snappy.parquet
+│
+├── rejected/
+│   └── quotes/
+│       └── year=2026/
+│           └── month=07/
+│               └── day=16/
+│                   └── part-00000-<job-id>.snappy.parquet
+│
+└── athena-results/
+    ├── <query-result>.csv
+    ├── <query-result>.csv.metadata
+    └── Unsaved/
+```
 
 ### Raw
 
-Stores unmodified responses from the Twelve Data API.
+stores original stock quote responses written by the ingestion Lambda.
 
 ```text
 raw/quotes/year=YYYY/month=MM/day=DD/
@@ -142,7 +180,7 @@ raw/quotes/year=YYYY/month=MM/day=DD/
 
 ### Standardized
 
-Stores validated responses from the raw layer.
+stores typed and validated JSONL records produced during ingestion.
 
 ```text
 standardized/quotes/year=YYYY/month=MM/day=DD/
@@ -150,7 +188,7 @@ standardized/quotes/year=YYYY/month=MM/day=DD/
 
 ### Curated
 
-Stores cleaned responses from the standardized layer in the form of parquet.
+stores valid, deduplicated, analytics-ready Parquet records produced by AWS Glue.
 
 ```text
 curated/quotes/year=YYYY/month=MM/day=DD/
@@ -158,11 +196,37 @@ curated/quotes/year=YYYY/month=MM/day=DD/
 
 ### Rejected
 
-Stores invalid respones from standardized layer 
+stores records that fail the Glue transformation's final quality checks. Rejected records are written as partitioned Parquet. 
 
 ```text
 rejected/quotes/year=YYYY/month=MM/day=DD/
 ```
+
+### athena-results
+stores Athena query outputs and their metadata files. Queries run from the Athena editor may appear under Unsaved/
+
+```text
+athena-results/query-result.csv
+athena-results/query-result.csv.metadata
+```
+
+## Glue Assests Bucket
+
+```text
+s3://stock-market-pipeline-dev-glue-assets-458255180332/
+│
+├── scripts/
+│   └── standardized_to_curated.py
+│
+└── temporary/
+    └── <AWS Glue temporary files>
+```
+
+## Scripts
+contains the Python ETL script referenced by the Glue job.
+
+## temporary U
+sed by AWS Glue for temporary job artifacts when required.
 
 
 ## AWS services
