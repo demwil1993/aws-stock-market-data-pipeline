@@ -128,7 +128,7 @@ JSON API responses            Validated JSONL records
                                  v
                            Amazon Athena
 ```
-
+![image](architecture/architecture-diagram.png)
 
 ## Stock data bucket
 
